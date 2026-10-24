@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test
+        run: swift test
+      - name: Build the app
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: scripts/bundle.sh --universal --adhoc
+      - name: Package
+        run: |
+          ditto -c -k --keepParent .build/Lintel.app .build/Lintel.zip
+          (cd .build && shasum -a 256 Lintel.zip > Lintel.zip.sha256)
+          # The install commands point at these copies, so main can change without reaching users.
+          cp install.sh uninstall.sh scripts/agent-hooks.py .build/
+      - name: Verify
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          # What users download: the app inside the archive.
+          ditto -x -k .build/Lintel.zip "$RUNNER_TEMP/verify"
+          app="$RUNNER_TEMP/verify/Lintel.app"
+          archs=$(lipo -archs "$app/Contents/MacOS/Lintel")
+          [ "$archs" = "x86_64 arm64" ] || { echo "::error::architectures: $archs"; exit 1; }
+          version=$(plutil -extract CFBundleShortVersionString raw -o - "$app/Contents/Info.plist")
+          [ "$version" = "${TAG#v}" ] || { echo "::error::version $version, tag $TAG"; exit 1; }
+          grep -q 'flags=.*runtime' <<<"$(codesign -dv "$app" 2>&1)" ||
+            { echo "::error::no hardened runtime"; exit 1; }
+          codesign --verify --strict "$app"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # The notes come from the annotated tag's message, which the checkout does not keep.
+          object=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha)
+          gh api "repos/$GITHUB_REPOSITORY/git/tags/$object" --jq .message >.build/notes.md
+          # A tag with a suffix (v1.0.0-beta.1) is a pre-release: releases/latest skips it.
+          prerelease=()
+          if [[ $TAG == *-* ]]; then prerelease=(--prerelease); fi
+          gh release create "$TAG" .build/Lintel.zip .build/Lintel.zip.sha256 \
+            .build/install.sh .build/uninstall.sh .build/agent-hooks.py \
+            --title "Lintel ${TAG#v}" --notes-file .build/notes.md --verify-tag "${prerelease[@]}"

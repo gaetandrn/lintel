@@ -1,0 +1,64 @@
+/* Bar context menu */
+"menu.openAtLogin" = "Open at Login";
+"menu.keepWindowsBelowBar" = "Keep Windows Below the Bar";
+"menu.textColor" = "Text Color";
+"menu.textColor.automatic" = "Automatic";
+"menu.textColor.light" = "Light";
+"menu.textColor.dark" = "Dark";
+"menu.quitLintel" = "Quit Lintel";
+
+/* Tab context menu; %@ is the app name */
+"tab.closeWindow" = "Close Window";
+"tab.quitApp" = "Quit “%@”";
+"tab.pinApp" = "Pin “%@”";
+"tab.unpinApp" = "Unpin “%@”";
+
+/* Tab tooltip: app name, window title */
+"tab.toolTip" = "%1$@ — %2$@";
+
+/* Accessibility label of a tab’s close button */
+"tab.close" = "Close";
+
+/* Overflow tab: number of windows that do not fit */
+"tab.overflow" = "+%lld";
+
+/* Label on the window holding a call */
+"status.inCall" = "In Call";
+
+/* Session list: time in the current state */
+"agent.duration.now" = "just now";
+"agent.duration.minutes" = "for %lld min";
+"agent.duration.hours" = "for %1$lld h %2$02lld";
+
+/* Session list: name shown when a session has no working directory */
+"sessions.untitled" = "Session";
+
+/* Version line at the top of the bar menu */
+"menu.version" = "Lintel %@";
+
+/* Toggle: Lintel fills the space below the bar on a title-bar double-click */
+"menu.titleBarZoom" = "Double-Click Title Bar to Fill";
+
+/* Bar menu */
+"menu.checkForUpdates" = "Check for Updates…";
+
+/* Update alert title */
+"update.available" = "Lintel %@ is available";
+
+/* Update alert body */
+"update.available.message" = "You have version %@. Paste the copied command in Terminal to update.";
+
+/* Update alert button: copies the install command */
+"update.copyCommand" = "Copy Update Command";
+
+/* Update alert button */
+"update.later" = "Later";
+
+/* Update alert title */
+"update.upToDate" = "Lintel is up to date";
+
+/* Update alert title */
+"update.failed" = "Couldn’t check for updates";
+
+/* Alert button */
+"update.ok" = "OK";

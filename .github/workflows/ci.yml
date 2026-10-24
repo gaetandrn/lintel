@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the scripts
+        run: |
+          for script in install.sh uninstall.sh scripts/*.sh; do /bin/bash -n "$script"; done
+          brew install --quiet shellcheck
+          shellcheck install.sh uninstall.sh scripts/*.sh
+      - name: Build the app
+        run: scripts/bundle.sh --adhoc
+      - name: Test
+        run: swift test

@@ -1,0 +1,54 @@
+/* Bar context menu */
+"menu.openAtLogin" = "Ouvrir à la connexion";
+"menu.keepWindowsBelowBar" = "Empêcher les fenêtres de recouvrir la barre";
+"menu.textColor" = "Couleur du texte";
+"menu.textColor.automatic" = "Selon le fond d’écran";
+"menu.textColor.light" = "Claire";
+"menu.textColor.dark" = "Sombre";
+"menu.quitLintel" = "Quitter Lintel";
+
+/* Tab context menu; %@ is the app name */
+"tab.closeWindow" = "Fermer la fenêtre";
+"tab.quitApp" = "Quitter « %@ »";
+"tab.pinApp" = "Épingler « %@ »";
+"tab.unpinApp" = "Désépingler « %@ »";
+
+/* Tab tooltip: app name, window title */
+"tab.toolTip" = "%1$@ — %2$@";
+
+/* Accessibility label of a tab’s close button */
+"tab.close" = "Fermer";
+
+/* Overflow tab: number of windows that do not fit */
+"tab.overflow" = "+%lld";
+
+/* Label on the window holding a call */
+"status.inCall" = "En appel";
+
+/* Session list: time in the current state */
+"agent.duration.now" = "à l’instant";
+"agent.duration.minutes" = "depuis %lld min";
+"agent.duration.hours" = "depuis %1$lld h %2$02lld";
+
+/* Session list: name shown when a session has no working directory */
+"sessions.untitled" = "Session";
+
+"menu.version" = "Lintel %@";
+
+"menu.titleBarZoom" = "Double-clic sur une barre de titre : remplir";
+
+"menu.checkForUpdates" = "Rechercher les mises à jour…";
+
+"update.available" = "Lintel %@ est disponible";
+
+"update.available.message" = "Vous avez la version %@. Collez la commande copiée dans le Terminal pour mettre à jour.";
+
+"update.copyCommand" = "Copier la commande de mise à jour";
+
+"update.later" = "Plus tard";
+
+"update.upToDate" = "Lintel est à jour";
+
+"update.failed" = "Impossible de rechercher les mises à jour";
+
+"update.ok" = "OK";
