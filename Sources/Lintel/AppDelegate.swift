@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         agentMonitor.onChange = { [unowned self] in render() }
         agentMonitor.start { [unowned self] in store.apps }
         callMonitor.onChange = { [unowned self] in render() }
-        callMonitor.start { [unowned self] in store.apps }
+        callMonitor.start(apps: { [unowned self] in store.apps }, firstSeen: { [unowned self] in store.firstSeen(of: $0) })
         store.start()
 
         // Nobody sees the bar while the screens sleep or another user is in front: stop polling.

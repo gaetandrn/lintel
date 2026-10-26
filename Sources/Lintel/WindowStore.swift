@@ -36,6 +36,9 @@ final class WindowStore {
 
     private let hub = AXObserverHub()
     private var order: [ElementKey: Int] = [:]
+    /// When each window was first seen: CallMonitor tells the call window by the one the
+    /// app opened as the microphone started.
+    private var firstSeen: [ElementKey: Date] = [:]
     private var nextOrder = 0
     private var changeScheduled = false
     private let ownPID = ProcessInfo.processInfo.processIdentifier
@@ -85,6 +88,8 @@ final class WindowStore {
         if let front = NSWorkspace.shared.frontmostApplication { readFocus(of: front.processIdentifier) }
     }
 
+    func firstSeen(of element: AXUIElement) -> Date? { firstSeen[ElementKey(element: element)] }
+
     func windowCount(pid: pid_t) -> Int {
         windows.values.reduce(0) { $0 + ($1.pid == pid ? 1 : 0) }
     }
@@ -132,6 +137,7 @@ final class WindowStore {
         hub.stop(pid: pid)
         windows = windows.filter { $0.value.pid != pid }
         order = order.filter { $0.key.element.pid != pid }
+        firstSeen = firstSeen.filter { $0.key.element.pid != pid }
         scheduleChange()
     }
 
@@ -191,6 +197,7 @@ final class WindowStore {
 
         let key = ElementKey(element: element)
         let rank = order[key] ?? {
+            firstSeen[key] = Date()
             nextOrder += 1
             let rank = initialRank?(pid, nextOrder) ?? nextOrder
             order[key] = rank
@@ -232,6 +239,7 @@ final class WindowStore {
             log.debug("destroyed pid \(pid) tracked \(self.windows[key] != nil)")
             hub.forget(window: key)
             order[key] = nil
+            firstSeen[key] = nil
             if windows.removeValue(forKey: key) != nil { scheduleChange() }
         default:
             refresh(element)

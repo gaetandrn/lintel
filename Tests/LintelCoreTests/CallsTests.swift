@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import LintelCore
 
@@ -44,6 +45,46 @@ struct CallsTests {
     @Test(arguments: ["Callback", "Meetup", "Recall", "Appellation", "Meetings archive"])
     func keywordsInsideOtherWordsDoNotMatch(title: String) {
         #expect(callWindowTitle([WindowTitle(title: title, isStandard: true)]) == nil)
+    }
+
+    static let micStart = Date()
+    static let account = " | STid | someone@example.com"
+
+    @Test func theWindowOpenedWithTheMicrophoneIsTheCall() {
+        // A meeting named by its organiser: no keyword to go by.
+        let windows = [
+            WindowTitle(title: "Synchro NG" + Self.account, isStandard: true, firstSeen: Self.micStart.addingTimeInterval(-1)),
+            WindowTitle(title: "Calendar" + Self.account, isStandard: true, firstSeen: Self.micStart.addingTimeInterval(-7200)),
+        ]
+        #expect(callWindowTitle(windows, micStartedAt: Self.micStart) == "Synchro NG" + Self.account)
+        // Without the microphone time, only the keywords are left.
+        #expect(callWindowTitle(windows) == nil)
+    }
+
+    @Test func aWindowOpenedLongBeforeTheCallIsNotIt() {
+        let windows = [
+            WindowTitle(title: "Chat with Alex" + Self.account, isStandard: true, firstSeen: Self.micStart.addingTimeInterval(-300)),
+            WindowTitle(title: "Calendar" + Self.account, isStandard: true, firstSeen: Self.micStart.addingTimeInterval(-7200)),
+        ]
+        #expect(callWindowTitle(windows, micStartedAt: Self.micStart) == nil)
+    }
+
+    @Test func windowsDiscoveredTogetherNameNothing() {
+        // Lintel started, or the app did, while the call was already running.
+        let windows = [
+            WindowTitle(title: "Synchro NG" + Self.account, isStandard: true, firstSeen: Self.micStart),
+            WindowTitle(title: "Calendar" + Self.account, isStandard: true, firstSeen: Self.micStart),
+        ]
+        #expect(callWindowTitle(windows, micStartedAt: Self.micStart) == nil)
+    }
+
+    @Test func compactViewWinsOverTheTiming() {
+        let windows = [
+            WindowTitle(title: "Meeting compact view | Synchro NG" + Self.account, isStandard: false),
+            WindowTitle(title: "Synchro NG" + Self.account, isStandard: true, firstSeen: Self.micStart.addingTimeInterval(-7200)),
+            WindowTitle(title: "Pop-out chat" + Self.account, isStandard: true, firstSeen: Self.micStart),
+        ]
+        #expect(callWindowTitle(windows, micStartedAt: Self.micStart) == "Synchro NG" + Self.account)
     }
 
     @Test func mainWindowAloneIsNotTheCall() {

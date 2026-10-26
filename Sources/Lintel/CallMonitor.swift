@@ -21,6 +21,9 @@ final class CallMonitor {
     }
 
     private var apps: () -> [pid_t: NSRunningApplication] = { [:] }
+    private var firstSeen: (AXUIElement) -> Date? = { _ in nil }
+    /// When each app in a call started capturing: the call window is the one it opened then.
+    private var micStartedAt: [pid_t: Date] = [:]
     private var watched: Set<AudioObjectID> = []
     /// Re-checks every 3 s during a call, so a missed CoreAudio change can't leave it stuck.
     private var callTimer: Timer?
@@ -33,8 +36,9 @@ final class CallMonitor {
         AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
     }
 
-    func start(apps: @escaping () -> [pid_t: NSRunningApplication]) {
+    func start(apps: @escaping () -> [pid_t: NSRunningApplication], firstSeen: @escaping (AXUIElement) -> Date?) {
         self.apps = apps
+        self.firstSeen = firstSeen
         AudioObjectAddPropertyListenerBlock(Self.system, &Self.processList, .main) { [weak self] _, _ in
             MainActor.assumeIsolated { self?.refresh() }
         }
@@ -45,8 +49,12 @@ final class CallMonitor {
         let windows = AXUIElementCreateApplication(pid).value(kAXWindowsAttribute) as? [AXUIElement] ?? []
         return LintelCore.callWindowTitle(windows.map { window in
             let v = window.values([kAXTitleAttribute, kAXSubroleAttribute])
-            return WindowTitle(title: v[0] as? String ?? "", isStandard: v[1] as? String == kAXStandardWindowSubrole)
-        })
+            return WindowTitle(
+                title: v[0] as? String ?? "",
+                isStandard: v[1] as? String == kAXStandardWindowSubrole,
+                firstSeen: firstSeen(window)
+            )
+        }, micStartedAt: micStartedAt[pid])
     }
 
     private var lastWindowCheck = Date.distantPast
@@ -86,6 +94,9 @@ final class CallMonitor {
                 MainActor.assumeIsolated { self?.refresh() }
             }
         }
+        let now = Date()
+        micStartedAt = micStartedAt.filter { inCall.contains($0.key) }
+        for pid in inCall where micStartedAt[pid] == nil { micStartedAt[pid] = now }
         var titles: [pid_t: String] = [:]
         for pid in inCall { titles[pid] = callWindowTitle(pid: pid) }
         guard inCall != appsInCall || titles != callTitles else { return }
