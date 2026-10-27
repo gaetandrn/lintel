@@ -35,6 +35,8 @@ final class WindowStore {
     var initialRank: ((pid_t, Int) -> Int)?
 
     private let hub = AXObserverHub()
+    /// Some apps exit without a didTerminate notification: Phone, once its last window closes.
+    private var exits: [pid_t: DispatchSourceProcess] = [:]
     private var order: [ElementKey: Int] = [:]
     /// When each window was first seen: CallMonitor tells the call window by the one the
     /// app opened as the microphone started.
@@ -56,7 +58,7 @@ final class WindowStore {
             }
         }
         on(NSWorkspace.didLaunchApplicationNotification) { [unowned self] in $0.map { track($0) } }
-        on(NSWorkspace.didTerminateApplicationNotification) { [unowned self] in $0.map { untrack($0) } }
+        on(NSWorkspace.didTerminateApplicationNotification) { [unowned self] in $0.map { untrack($0.processIdentifier) } }
         on(NSWorkspace.didActivateApplicationNotification) { [unowned self] app in
             guard let pid = app?.processIdentifier else { return }
             // Also resyncs the app's windows, in case a notification was missed. An app that
@@ -113,6 +115,7 @@ final class WindowStore {
     private func track(_ app: NSRunningApplication, attempt: Int = 0) {
         let pid = app.processIdentifier
         guard app.activationPolicy == .regular, pid != ownPID, !app.isTerminated else { return }
+        if exits[pid] == nil, !watchExit(pid) { return }
         apps[pid] = app
         appNames[pid] = app.localizedName ?? ""
         if app.isHidden { hiddenApps.insert(pid) }
@@ -129,9 +132,23 @@ final class WindowStore {
         }
     }
 
-    private func untrack(_ app: NSRunningApplication) {
-        let pid = app.processIdentifier
+    /// False when the process is already gone: an exit source armed too late never fires.
+    private func watchExit(_ pid: pid_t) -> Bool {
+        let source = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
+        source.setEventHandler { [weak self] in MainActor.assumeIsolated { self?.untrack(pid) } }
+        source.resume()
+        guard kill(pid, 0) == 0 || errno != ESRCH else {
+            source.cancel()
+            return false
+        }
+        exits[pid] = source
+        return true
+    }
+
+    private func untrack(_ pid: pid_t) {
+        exits.removeValue(forKey: pid)?.cancel()
         guard apps.removeValue(forKey: pid) != nil else { return }
+        log.debug("untrack pid \(pid)")
         appNames[pid] = nil
         hiddenApps.remove(pid)
         hub.stop(pid: pid)
