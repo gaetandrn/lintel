@@ -62,7 +62,7 @@ If you turn on Claude Code session states, the installer adds hooks to `~/.claud
 | Middle-click, or hover and click × | Close the window |
 | Click **+N** at the end of the bar | List the windows that don’t fit |
 | Right-click a tab | Close the window, quit the app, pin or unpin it |
-| Right-click the bar | Open at Login, Keep Windows Below the Bar, Double-Click Title Bar to Fill, Text Color, Check for Updates…, Quit Lintel |
+| Click Lintel’s menu bar icon, or right-click the bar | Open at Login, Keep Windows Below the Bar, Double-Click Title Bar to Fill, Text Color, Check for Updates…, Quit Lintel |
 | Hover a Claude Code label (Running, Needs you, Done) | List the sessions and how long they’ve been in that state |
 
 ## Troubleshooting
@@ -74,7 +74,7 @@ macOS ties the permission to the app’s signature. The install command signs ev
 Right-click the bar and make sure **Keep Windows Below the Bar** is checked. Window managers other than Rectangle need a top gap of 28 pt.
 
 **Text is hard to read on my wallpaper.**
-Right-click the bar › **Text Color** › **Light** or **Dark**. **Automatic** follows the menu bar.
+Right-click the bar › **Text Color** › **Light** or **Dark**. **Automatic** follows the menu bar, which macOS reports through Lintel’s menu bar icon: if you hide that icon, choose Light or Dark.
 
 ## Uninstall
 

@@ -7,7 +7,7 @@ import LintelCore
 private let log = Logger(subsystem: "io.github.gaetandrn.lintel", category: "app")
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let store = WindowStore()
     private let overlapGuard = OverlapGuard()
     private let badgeMonitor = BadgeMonitor()
@@ -18,9 +18,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panels: [CGDirectDisplayID: BarPanel] = [:]
     private var icons: [pid_t: NSImage] = [:]
     private var permissionTimer: Timer?
-    /// Invisible zero-length status item: its button takes the menu bar's appearance, which
-    /// macOS picks from the wallpaper. Only exists while the text tone is "auto".
-    private var menuBarProbe: NSStatusItem?
+    /// Opens the bar menu. Its button takes the menu bar's appearance, which macOS picks from
+    /// the wallpaper: the automatic text tone follows it. macOS draws a highlight when any menu
+    /// bar item is clicked, so it cannot be an invisible probe.
+    private var statusItem: NSStatusItem?
     private var menuBarObservation: NSKeyValueObservation?
     /// Why polling is paused: screens asleep, another user's session in front.
     private var pauseReasons = Set<Notification.Name>()
@@ -57,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func start() {
+        addStatusItem()
         rebuildBars()
         titleBarZoom.isEnabled = titleBarZoomEnabled
         // Without the event tap, macOS keeps its own action.
@@ -138,26 +140,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refreshTextTone()
     }
 
+    private func addStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        item.button?.image = menuBarIcon()
+        item.button?.setAccessibilityLabel("Lintel")
+        let menu = NSMenu()
+        menu.delegate = self
+        item.menu = menu
+        menuBarObservation = item.button?.observe(\.effectiveAppearance) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.refreshTextTone() }
+        }
+        statusItem = item
+    }
+
+    /// The app icon's motif as a template: the lintel above a window.
+    private func menuBarIcon() -> NSImage {
+        let image = NSImage(size: NSSize(width: 18, height: 16), flipped: false) { _ in
+            NSColor.black.set()
+            NSBezierPath(roundedRect: NSRect(x: 1.5, y: 11, width: 15, height: 3.5), xRadius: 1.75, yRadius: 1.75).fill()
+            let pane = NSBezierPath(roundedRect: NSRect(x: 3.7, y: 1.7, width: 10.6, height: 7.1), xRadius: 2, yRadius: 2)
+            pane.lineWidth = 1.4
+            pane.stroke()
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        let fresh = barMenu()
+        let items = fresh.items
+        fresh.removeAllItems()
+        menu.items = items
+    }
+
     /// Light or dark text like the menu bar's, which macOS updates as the wallpaper changes.
     private func refreshTextTone() {
-        let tone = textTone
         let light: Bool
-        switch tone {
-        case "light", "dark":
-            light = tone == "light"
-            menuBarObservation = nil
-            if let probe = menuBarProbe { NSStatusBar.system.removeStatusItem(probe) }
-            menuBarProbe = nil
+        switch textTone {
+        case "light": light = true
+        case "dark": light = false
         default:
-            if menuBarProbe == nil {
-                let probe = NSStatusBar.system.statusItem(withLength: 0)
-                menuBarObservation = probe.button?.observe(\.effectiveAppearance) { [weak self] _, _ in
-                    MainActor.assumeIsolated { self?.refreshTextTone() }
-                }
-                menuBarProbe = probe
-            }
             // The menu bar has one appearance for all screens, even when their wallpapers differ.
-            let appearance = menuBarProbe?.button?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua, .vibrantLight, .vibrantDark])
+            let appearance = statusItem?.button?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua, .vibrantLight, .vibrantDark])
             light = appearance == .darkAqua || appearance == .vibrantDark
         }
         for panel in panels.values { panel.setLightText(light) }
